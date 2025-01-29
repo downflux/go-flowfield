@@ -5,6 +5,19 @@ type V [2]int
 func (v V) X() int { return v[0] }
 func (v V) Y() int { return v[1] }
 
+func (v V) Add(u V) {
+	v[0] += u[0]
+	v[1] += u[1]
+}
+
+func (v V) Sub(u V) {
+	v[0] -= u[0]
+	v[1] -= u[1]
+}
+
+func Sub(v, u V) V { return [2]int{v.X() - u.X(), v.Y() - u.Y()} }
+func Add(v, u V) V { return [2]int{v.X() + u.X(), v.Y() + u.Y()} }
+
 type B [2]V
 
 func (b B) P() V { return b[0] }

@@ -7,14 +7,14 @@ import (
 )
 
 var (
-	size = vector.V{8, 8}
-	box  = vector.B{vector.V{0, 0}, size}
+	Size = vector.V{8, 8}
+	b    = vector.B{vector.V{0, 0}, Size}
 )
 
 type O[T any] struct {
 	Dimension vector.V
 
-	Fill T
+	Wall T
 }
 
 type C[T any] struct {
@@ -24,30 +24,30 @@ type C[T any] struct {
 }
 
 func New[T any](o O[T]) (*C[T], error) {
-	if !box.In(o.Dimension) {
+	if !b.In(o.Dimension) {
 		return nil, fmt.Errorf("invalid chunk dimension specified: %v", o.Dimension)
 	}
 
 	vs := [][]T{}
-	for i := 0; i < size.X(); i++ {
-		vs = append(vs, make([]T, size.Y()))
+	for i := 0; i < Size.X(); i++ {
+		vs = append(vs, make([]T, Size.Y()))
 	}
 
-	for i := o.Dimension.X(); i < size.X(); i++ {
-		for j := o.Dimension.Y(); j < size.Y(); j++ {
-			vs[i][j] = o.Fill
+	for i := o.Dimension.X(); i < Size.X(); i++ {
+		for j := o.Dimension.Y(); j < Size.Y(); j++ {
+			vs[i][j] = o.Wall
 		}
 	}
 
 	return &C[T]{
-		dimension: size,
+		dimension: Size,
 
 		values: vs,
 	}, nil
 }
 
 func (c *C[T]) V(p vector.V) (T, error) {
-	if !box.In(p) {
+	if !b.In(p) {
 		var empty T
 		return empty, fmt.Errorf("invalid relative chunk position: %v", p)
 	}
