@@ -6,50 +6,61 @@ import (
 	"github.com/downflux/go-flowfield/vector"
 )
 
-var (
-	Size = vector.V{8, 8}
-	b    = vector.B{vector.V{0, 0}, Size}
-)
+type ID int
 
-type O[T any] struct {
+type O struct {
 	Dimension vector.V
-
-	Wall T
+	Offset    vector.V
 }
 
-type C[T any] struct {
+type C struct {
+	id        ID
 	dimension vector.V
+	offset    vector.V
+	dirty     bool
 
-	values [][]T // (x, y)
+	weights []uint // (x, y)
+
+	neighbors []*C
 }
 
-func New[T any](o O[T]) (*C[T], error) {
-	if !b.In(o.Dimension) {
-		return nil, fmt.Errorf("invalid chunk dimension specified: %v", o.Dimension)
+func New(o O) *C {
+	ws := make([]uint, o.Dimension.X()*o.Dimension.Y())
+
+	return &C{
+		id:        ID(o.Offset.X()/o.Dimension.X() + o.Offset.Y()),
+		dimension: o.Dimension,
+		offset:    o.Offset,
+		dirty:     true,
+
+		weights: ws,
 	}
-
-	vs := [][]T{}
-	for i := 0; i < Size.X(); i++ {
-		vs = append(vs, make([]T, Size.Y()))
-	}
-
-	for i := o.Dimension.X(); i < Size.X(); i++ {
-		for j := o.Dimension.Y(); j < Size.Y(); j++ {
-			vs[i][j] = o.Wall
-		}
-	}
-
-	return &C[T]{
-		dimension: Size,
-
-		values: vs,
-	}, nil
 }
 
-func (c *C[T]) V(p vector.V) (T, error) {
-	if !b.In(p) {
-		var empty T
-		return empty, fmt.Errorf("invalid relative chunk position: %v", p)
+func (c *C) ID() ID { return c.ID() }
+func (c *C) local(global vector.V) int {
+	buf := vector.V{}
+	vector.Sub(global, c.offset, buf)
+	return buf.X()/c.dimension.X() + buf.Y()
+}
+
+func (c *C) SetNeighbors(ns []*C) { c.neighbors = ns }
+
+func (c *C) SetWeight(global vector.V, w uint) error {
+	id := c.local(global)
+	if id < 0 || id > len(c.weights) {
+		return fmt.Errorf("position p %v not in chunk with offset %v and dimension %v", global, c.offset, c.dimension)
 	}
-	return c.values[p.X()][p.Y()], nil
+
+	c.dirty = c.dirty && (c.weights[id] == w)
+	c.weights[id] = w
+	return nil
+}
+
+func (c *C) Weight(global vector.V) (uint, error) {
+	id := c.local(global)
+	if id < 0 || id > len(c.weights) {
+		return 0, fmt.Errorf("position p %v not in chunk with offset %v and dimension %v", global, c.offset, c.dimension)
+	}
+	return c.weights[id], nil
 }
